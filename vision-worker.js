@@ -12,7 +12,7 @@ onmessage = async ({ data }) => {
   if (data.type === 'init') {
     try {
       const [{ FilesetResolver, FaceLandmarker, GestureRecognizer }, rec] = await Promise.all([
-        import('./vendor/vision_bundle.mjs'), import('./recognition.js?v=11')
+        import('./vendor/vision_bundle.mjs'), import('./recognition.js?v=12')
       ]);
       recognition = rec;
       const base = new URL('.', self.location.href);

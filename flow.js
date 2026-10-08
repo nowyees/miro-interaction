@@ -8,7 +8,7 @@ const ATTENTION_MS = 2000;   // look at the robot this long to wake it
 const ABSENCE_MS = 5000;     // no face this long in DEFAULT -> back to idle
 const RELEASE_MS = 300;      // gesture must stop briefly before the next one
 
-// IDLE -(look 2s)-> ONBOARD -> DEFAULT -(gesture)-> action -> DEFAULT
+// IDLE -(look 2s)-> WAKING (IDLE finishes its current loop) -> ONBOARD -> DEFAULT -(gesture)-> action -> DEFAULT
 // DEFAULT -(no face 5s)-> BACK -> IDLE
 export class InteractionFlow {
   constructor(onChange) { this.onChange = onChange; this.reset(0); }
@@ -22,6 +22,7 @@ export class InteractionFlow {
     this.onChange?.(state);
   }
   ended(state, at) {
+    if (state === 'IDLE') { if (this.state === 'WAKING') this.change('ONBOARD', at); return; }
     if (state !== this.state) return;
     if (state === 'ONBOARD' || ACTIONS.has(state)) this.change('DEFAULT', at);
     else if (state === 'BACK') this.change('IDLE', at);
@@ -42,7 +43,7 @@ export class InteractionFlow {
       // A short glance away or a missed frame doesn't restart the count.
       if (attentive) {
         this.attentionStart ??= at; this.lastAttention = at;
-        if (at - this.attentionStart >= ATTENTION_MS) this.change('ONBOARD', at);
+        if (at - this.attentionStart >= ATTENTION_MS) this.change('WAKING', at);
       } else if (at - (this.lastAttention ?? -Infinity) > 400) this.attentionStart = null;
       return;
     }

@@ -1,17 +1,25 @@
-import { CLIPS, InteractionFlow } from './flow.js?v=11';
+import { CLIPS, InteractionFlow } from './flow.js?v=12';
 const stage=document.querySelector('#stage'), videos=[...stage.querySelectorAll('video')];
 const status=document.querySelector('#status');
 let active=0, playbackToken=0, currentClip=null, stream, worker, initializing=false;
 let ready=false, inFlight=false, frameTimer, camera, lastFrameTime=-1, initToken=0;
 const showStatus=text=>{ status.textContent=text; status.hidden=!text; };
 
+let idleVideo=null;
 async function playClip(state) {
   if (state==='DEFAULT') return;
+  // Let the idle loop play to its end; its 'ended' event starts onboarding.
+  if (state==='WAKING') {
+    if(!idleVideo||idleVideo.ended) flow.ended('IDLE',performance.now());
+    else idleVideo.loop=false;
+    return;
+  }
   const token=++playbackToken;
   const next=videos[1-active];
   next.pause(); next.classList.remove('active');
   next.src=new URL(`./media/${CLIPS[state]}`,import.meta.url).href;
   next.loop=state==='IDLE'; next.muted=true;
+  idleVideo=state==='IDLE'?next:null;
   next.onended=()=>{ if(token===playbackToken) flow.ended(state,performance.now()); };
   next.onerror=()=>{ if(token===playbackToken) showStatus('영상을 불러오지 못했어요. 리셋을 눌러 다시 시도해 주세요.'); };
   try {
@@ -46,7 +54,7 @@ async function startVision() {
     camera=document.createElement('video'); camera.muted=true; camera.playsInline=true; camera.srcObject=stream;
     await camera.play();
     if(token!==initToken) return;
-    worker=new Worker(new URL('./vision-worker.js?v=11',import.meta.url));
+    worker=new Worker(new URL('./vision-worker.js?v=12',import.meta.url));
     const timeout=setTimeout(()=>fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'),45000);
     function fail(message) { if(token!==initToken) return; clearTimeout(timeout); stopVision(); showStatus(message); }
     worker.onerror=error=>{ console.error('Vision worker',error); fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'); };
