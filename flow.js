@@ -1,6 +1,6 @@
 export const CLIPS = Object.freeze({
-  IDLE: '1_IDLE_v4.mp4', ONBOARD: '2_On Boarding.mp4', BACK: '3_Back IDLE.mp4',
-  RSP: '4_RSP.mp4', HI: '5_HI_v4.mp4', PICTURE: '6_Picture_v4.mp4', TOMATO: '7_Tomato_v4.mp4',
+  IDLE: 'idle.mp4', ONBOARD: 'onboarding.mp4', BACK: 'back.mp4',
+  RSP: 'rsp.mp4', HI: 'hi.mp4', PICTURE: 'picture.mp4', TOMATO: 'tomato.mp4',
 });
 export const ACTIONS = new Set(['RSP', 'HI', 'PICTURE', 'TOMATO']);
 

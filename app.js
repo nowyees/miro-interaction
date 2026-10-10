@@ -1,4 +1,4 @@
-import { CLIPS, InteractionFlow } from './flow.js?v=12';
+import { CLIPS, InteractionFlow } from './flow.js?v=13';
 const stage=document.querySelector('#stage'), videos=[...stage.querySelectorAll('video')];
 const status=document.querySelector('#status');
 let active=0, playbackToken=0, currentClip=null, stream, worker, initializing=false;
@@ -54,7 +54,7 @@ async function startVision() {
     camera=document.createElement('video'); camera.muted=true; camera.playsInline=true; camera.srcObject=stream;
     await camera.play();
     if(token!==initToken) return;
-    worker=new Worker(new URL('./vision-worker.js?v=12',import.meta.url));
+    worker=new Worker(new URL('./vision-worker.js?v=13',import.meta.url));
     const timeout=setTimeout(()=>fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'),45000);
     function fail(message) { if(token!==initToken) return; clearTimeout(timeout); stopVision(); showStatus(message); }
     worker.onerror=error=>{ console.error('Vision worker',error); fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'); };
