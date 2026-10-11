@@ -24,6 +24,9 @@ export class InteractionFlow {
   ended(state, at) {
     if (state === 'IDLE') { if (this.state === 'WAKING') this.change('ONBOARD', at); return; }
     if (state !== this.state) return;
+    // Gestures only count once onboarding has finished, and one already being
+    // made while it played must be released and made again.
+    if (state === 'ONBOARD') { this.armed = false; this.releaseStart = null; }
     if (state === 'ONBOARD' || ACTIONS.has(state)) this.change('DEFAULT', at);
     else if (state === 'BACK') this.change('IDLE', at);
   }

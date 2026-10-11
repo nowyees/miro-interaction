@@ -1,4 +1,4 @@
-import { CLIPS, InteractionFlow } from './flow.js?v=14';
+import { CLIPS, InteractionFlow } from './flow.js?v=17';
 const stage=document.querySelector('#stage'), videos=[...stage.querySelectorAll('video')];
 const status=document.querySelector('#status');
 let active=0, playbackToken=0, currentClip=null, stream, worker, initializing=false;
