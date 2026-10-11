@@ -17,7 +17,7 @@ async function playClip(state) {
   const token=++playbackToken;
   const next=videos[1-active];
   next.pause(); next.classList.remove('active');
-  next.src=new URL(`./media/${CLIPS[state]}?v=15`,import.meta.url).href;
+  next.src=new URL(`./media/${CLIPS[state]}?v=16`,import.meta.url).href;
   next.loop=state==='IDLE'; next.muted=true;
   idleVideo=state==='IDLE'?next:null;
   next.onended=()=>{ if(token===playbackToken) flow.ended(state,performance.now()); };
