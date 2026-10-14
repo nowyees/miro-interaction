@@ -100,8 +100,8 @@ export class HandTrack {
 
 // Combines both hands into one gesture: TOMATO > PICTURE > HI > RSP (raised index).
 export class GestureEngine {
-  constructor() { this.tracks = [new HandTrack(), new HandTrack()]; this.heartSince = null; this.heartLast = null; }
-  reset() { this.tracks.forEach(t => t.reset()); this.heartSince = null; this.heartLast = null; }
+  constructor() { this.tracks = [new HandTrack(), new HandTrack()]; this.heartSince = null; this.heartLast = null; this.twoHandsLast = null; }
+  reset() { this.tracks.forEach(t => t.reset()); this.heartSince = null; this.heartLast = null; this.twoHandsLast = null; }
   // Keeps each physical hand on the same track between frames.
   assign(hands) {
     if (hands.length === 2) {
@@ -124,7 +124,7 @@ export class GestureEngine {
     if (heartNow) { this.heartSince ??= at; this.heartLast = at; }
     else if (this.heartLast === null || at - this.heartLast > 300) this.heartSince = null;
     // Two hands close together are a heart in progress, not single-hand gestures.
-    const twoClose = hands.length === 2 && d2(hands[0].points[0], hands[1].points[0]) < (palmSize(hands[0].points) + palmSize(hands[1].points)) * 1.8;
+    const twoClose = hands.length === 2 && d2(hands[0].points[0], hands[1].points[0]) < (palmSize(hands[0].points) + palmSize(hands[1].points)) * 3;
     if (this.heartSince !== null) {
       this.tracks.forEach(t => t.reset());
       return { gesture: at - this.heartSince >= 400 ? 'TOMATO' : null, poses: ['HEART'] };
@@ -138,7 +138,11 @@ export class GestureEngine {
     }
     if (twoClose) return { gesture: null, poses };
     const any = test => this.tracks.some(test);
-    if (any(t => t.holding('V', at, 450))) return { gesture: 'PICTURE', poses };
+    // Both hands up usually means a heart is being formed, and a hand on its
+    // way there can look like a V for a moment: ask for a longer V hold then.
+    if (hands.length === 2) this.twoHandsLast = at;
+    const vHold = this.twoHandsLast !== null && at - this.twoHandsLast < 800 ? 1000 : 450;
+    if (any(t => t.holding('V', at, vHold))) return { gesture: 'PICTURE', poses };
     if (any(t => t.shaking('OPEN', 'x', at))) return { gesture: 'HI', poses };
     // Index finger raised (a resting fist is too easy to make by accident).
     if (any(t => t.holding('POINT', at, 500))) return { gesture: 'RSP', poses };

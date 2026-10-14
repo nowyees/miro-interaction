@@ -13,7 +13,7 @@ for(const [state,file] of Object.entries(CLIPS)) {
   const v=document.createElement('video');
   v.muted=true; v.playsInline=true; v.preload='auto'; v.disablePictureInPicture=true;
   v.setAttribute('disableremoteplayback','');
-  v.src=new URL(`./media/${file}?v=30`,import.meta.url).href;
+  v.src=new URL(`./media/${file}?v=31`,import.meta.url).href;
   stage.insertBefore(v,screen); clips[state]=v;
 }
 let shown=null;
@@ -124,7 +124,7 @@ async function startVision() {
     camera=document.createElement('video'); camera.muted=true; camera.playsInline=true; camera.srcObject=stream;
     await camera.play();
     if(token!==initToken) return;
-    worker=new Worker(new URL('./vision-worker.js?v=14',import.meta.url));
+    worker=new Worker(new URL('./vision-worker.js?v=31',import.meta.url));
     const timeout=setTimeout(()=>fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'),45000);
     function fail(message) { if(token!==initToken) return; clearTimeout(timeout); stopVision(); showStatus(message); }
     worker.onerror=error=>{ console.error('Vision worker',error); fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'); };
