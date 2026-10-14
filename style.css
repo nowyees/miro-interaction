@@ -27,4 +27,3 @@ body:has(#stage:fullscreen) .controls, body:has(#stage:fullscreen) #status { dis
 /* Mirror of the webcam with detected hands, so visitors see they're tracked. */
 #cam { position: absolute; right: calc(var(--u) * 24); bottom: calc(var(--u) * 24); width: calc(var(--u) * 232); height: calc(var(--u) * 174);
   border-radius: calc(var(--u) * 18); box-shadow: 0 calc(var(--u) * 6) calc(var(--u) * 24) #0002; background: #eee; outline: calc(var(--u) * 3) solid #fff; }
-#cam.active { outline-color: #6be06b; }
