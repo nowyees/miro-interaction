@@ -1,40 +1,66 @@
-import { CLIPS, InteractionFlow } from './flow.js?v=17';
-const stage=document.querySelector('#stage'), videos=[...stage.querySelectorAll('video')];
+import { CLIPS, InteractionFlow } from './flow.js?v=20';
+const stage=document.querySelector('#stage'), screen=document.querySelector('#screen'), sctx=screen.getContext('2d');
 const status=document.querySelector('#status');
-let active=0, playbackToken=0, currentClip=null, stream, worker, initializing=false;
+let playbackToken=0, currentClip=null, stream, worker, initializing=false;
 let ready=false, inFlight=false, frameTimer, camera, lastFrameTime=-1, initToken=0;
 const showStatus=text=>{ status.textContent=text; status.hidden=!text; };
 
-let idleVideo=null;
+// Every clip is preloaded in its own <video> under the canvas. The canvas only
+// ever shows frames that were actually decoded, and keeps the last one while
+// the next clip starts, so a clip switch can never flash black or blank.
+const clips={};
+for(const [state,file] of Object.entries(CLIPS)) {
+  const v=document.createElement('video');
+  v.muted=true; v.playsInline=true; v.preload='auto'; v.disablePictureInPicture=true;
+  v.setAttribute('disableremoteplayback','');
+  v.src=new URL(`./media/${file}?v=19`,import.meta.url).href;
+  stage.insertBefore(v,screen); clips[state]=v;
+}
+let shown=null;
+sctx.fillStyle='#fff'; sctx.fillRect(0,0,screen.width,screen.height);
+let lastPaint=0;
+function paint() { if(shown&&shown.readyState>=2) sctx.drawImage(shown,0,0,screen.width,screen.height); lastPaint=performance.now(); }
+(function loop() { paint(); requestAnimationFrame(loop); })();
+// Some embedded/TV browsers throttle animation frames; keep painting anyway.
+setInterval(()=>{ if(performance.now()-lastPaint>100) paint(); },33);
+// Resolves once the clip has a decoded frame to show (frame callback where
+// supported, with a polling fallback for browsers that throttle it).
+const firstFrame=v=>new Promise(resolve=>{
+  let done=false; const finish=()=>{ if(!done){ done=true; resolve(); } };
+  v.requestVideoFrameCallback?.(finish);
+  const check=()=>{ if(done) return; if(v.readyState>=2&&v.currentTime>0.03) finish(); else setTimeout(check,15); };
+  check();
+});
+
 async function playClip(state) {
   if (state==='DEFAULT') return;
   // Let the idle loop play to its end; its 'ended' event starts onboarding.
   if (state==='WAKING') {
-    if(!idleVideo||idleVideo.ended) flow.ended('IDLE',performance.now());
-    else idleVideo.loop=false;
+    const idle=clips.IDLE;
+    if(shown!==idle||idle.ended) flow.ended('IDLE',performance.now());
+    else idle.loop=false;
     return;
   }
   const token=++playbackToken;
-  const next=videos[1-active];
-  next.pause(); next.classList.remove('active');
-  next.src=new URL(`./media/${CLIPS[state]}?v=19`,import.meta.url).href;
-  next.loop=state==='IDLE'; next.muted=true;
-  idleVideo=state==='IDLE'?next:null;
+  const next=clips[state];
+  next.loop=state==='IDLE';
   next.onended=()=>{ if(token===playbackToken) flow.ended(state,performance.now()); };
   next.onerror=()=>{ if(token===playbackToken) showStatus('영상을 불러오지 못했어요. 리셋을 눌러 다시 시도해 주세요.'); };
   try {
+    if(next.currentTime>0) next.currentTime=0;
     await next.play();
     if(token!==playbackToken) return;
-    if(next.requestVideoFrameCallback) await new Promise(resolve=>next.requestVideoFrameCallback(resolve));
+    await firstFrame(next);
     if(token!==playbackToken) return;
-    videos[active].pause(); videos[active].classList.remove('active');
-    next.classList.add('active'); active=1-active; currentClip=state;
+    const prev=shown; shown=next; currentClip=state;
+    if(prev&&prev!==next) prev.pause();
   } catch(error) {
     if(token===playbackToken && error.name!=='AbortError') showStatus('영상 재생을 시작하려면 리셋을 눌러 주세요.');
   }
 }
 let flow;
 flow=new InteractionFlow(state=>queueMicrotask(()=>playClip(state)));
+window.__miro={flow,clips}; // console access for testing
 
 function stopVision() {
   initToken++; clearTimeout(frameTimer); worker?.terminate(); worker=null;
@@ -102,8 +128,8 @@ document.querySelector('#fullscreen').addEventListener('click',async()=>{
 });
 document.addEventListener('visibilitychange',()=>{
   flow.suspend();
-  if(document.hidden) { clearTimeout(frameTimer); videos[active].pause(); }
-  else { if(currentClip&&flow.state!=='DEFAULT') videos[active].play().catch(()=>{}); schedule(); }
+  if(document.hidden) { clearTimeout(frameTimer); shown?.pause(); }
+  else { if(currentClip&&flow.state!=='DEFAULT') shown?.play().catch(()=>{}); schedule(); }
 });
 // Hidden helpers (not visible in fullscreen):
 //   D = camera/recognition debug view, 1-4 = play RSP/HI/PICTURE/TOMATO manually.
