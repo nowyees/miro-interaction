@@ -110,6 +110,7 @@ function stopVision() {
   stream?.getTracks().forEach(t=>t.stop()); stream=null;
   camera?.pause(); if(camera) camera.srcObject=null;
   ready=false; initializing=false; inFlight=false; lastFrameTime=-1;
+  document.querySelector('#cam').hidden=true;
 }
 async function startVision() {
   if(initializing || ready) return;
@@ -130,7 +131,7 @@ async function startVision() {
     worker.onmessage=({data})=>{
       if(token!==initToken) return;
       if(data.type==='ready') { clearTimeout(timeout); ready=true; initializing=false; showStatus(''); capture(); }
-      else if(data.type==='result' && !document.hidden) { flow.tick(data); drawDebug(data); }
+      else if(data.type==='result' && !document.hidden) { flow.tick(data); drawDebug(data); drawCam(data); }
       else if(data.type==='frame-done') { inFlight=false; schedule(); }
       else if(data.type==='error' || data.type==='frame-error') { console.error('Recognition',data.message); fail('웹캠 인식 오류가 생겼어요. 리셋으로 다시 시도해 주세요.'); }
     };
@@ -189,6 +190,26 @@ function drawDebug(r) {
   dctx.fillText(`state ${flow.state} · face ${r.present?'O':'X'} · look ${r.attentive?'O':'X'}`,8,16);
   dctx.fillText(`pose ${r.poses.map(p=>p??'-').join(' / ')||'-'} · ${r.labels.join(' / ')}`,8,34);
   dctx.fillStyle=r.gesture?'#7CFC00':'#fff'; dctx.fillText(`gesture ${r.gesture??'-'}`,8,52);
+}
+// On-screen mirror: camera image plus the hand skeleton the recognizer sees.
+const cam=document.querySelector('#cam'), cctx=cam.getContext('2d');
+function drawCam(r) {
+  if(!camera||camera.readyState<2) return;
+  cam.hidden=false;
+  const w=cam.width, h=cam.height, vw=camera.videoWidth, vh=camera.videoHeight;
+  // Cover-crop the camera into the box, mirrored like a mirror.
+  const scale=Math.max(w/vw,h/vh), dw=vw*scale, dh=vh*scale, ox=(w-dw)/2, oy=(h-dh)/2;
+  cctx.save(); cctx.translate(w,0); cctx.scale(-1,1);
+  cctx.drawImage(camera,ox,oy,dw,dh);
+  cctx.lineCap='round'; cctx.lineWidth=3;
+  for(const p of r.hands) {
+    cctx.strokeStyle='#ffffff'; cctx.globalAlpha=.9;
+    for(const [a,b] of BONES) { cctx.beginPath(); cctx.moveTo(ox+p[a][0]*dw,oy+p[a][1]*dh); cctx.lineTo(ox+p[b][0]*dw,oy+p[b][1]*dh); cctx.stroke(); }
+    cctx.fillStyle=r.gesture?'#6be06b':'#4aa3ff';
+    for(const q of p) { cctx.beginPath(); cctx.arc(ox+q[0]*dw,oy+q[1]*dh,3.2,0,Math.PI*2); cctx.fill(); }
+  }
+  cctx.restore(); cctx.globalAlpha=1;
+  cam.classList.toggle('active',!!r.gesture);
 }
 const KEYS={'1':'RSP','2':'HI','3':'PICTURE','4':'TOMATO'};
 document.addEventListener('keydown',e=>{
