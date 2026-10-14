@@ -58,8 +58,51 @@ async function playClip(state) {
     if(token===playbackToken && error.name!=='AbortError') showStatus('영상 재생을 시작하려면 리셋을 눌러 주세요.');
   }
 }
+// Guide text (Figma: DDP 영디자이너, node 10222:1338) shown above the robot's head.
+const HINTS={
+  IDLE:{sub:'Miro와 놀아볼까요?',title:'선 앞에서 카메라를 바라봐 주세요'},
+  WAKING:{sub:'Miro가 물을 주고 있어요',title:'하던 일을 마치고 금방 돌아올 거예요!'},
+};
+const CARDS=[
+  {icon:'point',sub:'Miro와 가위바위보를 해볼까요?',title:'카메라를 향해 검지 하나를 펴 보세요!'},
+  {icon:'wave',sub:'Miro에게 인사해볼까요?',title:'카메라를 향해 손을 흔들어 보세요!'},
+  {icon:'v',sub:'Miro가 무슨 포즈를 할까요?',title:'카메라를 향해 V 해보세요!'},
+  {icon:'heart',sub:'Miro가 어떤 걸 가져다 줄까요?',title:'카메라를 향해 손가락을 하트모양으로 만들어보세요!'},
+];
+const CARD_MS=3000;
+const frameEl=document.querySelector('#frame'), hintEl=document.querySelector('#hint');
+const hintIcon=document.querySelector('#hint-icon'), hintSub=document.querySelector('#hint-sub'), hintTitle=document.querySelector('#hint-title');
+CARDS.forEach(c=>{ new Image().src=`./guide/${c.icon}.png`; });
+let hintKey=null, hintSwap, cardTimer, cardIndex=0;
+function fitFrame() {
+  const w=stage.clientWidth, h=stage.clientHeight, fw=Math.min(w,h*9/16), fh=fw*16/9;
+  Object.assign(frameEl.style,{left:`${(w-fw)/2}px`,top:`${(h-fh)/2}px`,width:`${fw}px`,height:`${fh}px`});
+  frameEl.style.setProperty('--u',`${fw/1080}px`);
+}
+new ResizeObserver(fitFrame).observe(stage); fitFrame();
+function showHint(hint) {
+  const key=hint?`${hint.icon||''}|${hint.title}`:null;
+  if(key===hintKey) return;
+  hintKey=key; clearTimeout(hintSwap);
+  hintEl.classList.remove('show');
+  if(!hint) return;
+  // Fade out, swap the text, fade back in.
+  hintSwap=setTimeout(()=>{
+    hintIcon.hidden=!hint.icon; if(hint.icon) hintIcon.src=`./guide/${hint.icon}.png`;
+    hintSub.textContent=hint.sub; hintTitle.textContent=hint.title;
+    hintEl.classList.add('show');
+  },hintEl.textContent.trim()?450:0);
+}
+function updateHint(state) {
+  clearInterval(cardTimer);
+  if(HINTS[state]) showHint(HINTS[state]);
+  else if(state==='DEFAULT') {
+    showHint(CARDS[cardIndex]);
+    cardTimer=setInterval(()=>{ cardIndex=(cardIndex+1)%CARDS.length; showHint(CARDS[cardIndex]); },CARD_MS);
+  } else showHint(null);
+}
 let flow;
-flow=new InteractionFlow(state=>queueMicrotask(()=>playClip(state)));
+flow=new InteractionFlow(state=>{ updateHint(state); queueMicrotask(()=>playClip(state)); });
 window.__miro={flow,clips}; // console access for testing
 
 function stopVision() {
