@@ -13,7 +13,7 @@ for(const [state,file] of Object.entries(CLIPS)) {
   const v=document.createElement('video');
   v.muted=true; v.playsInline=true; v.preload='auto'; v.disablePictureInPicture=true;
   v.setAttribute('disableremoteplayback','');
-  v.src=new URL(`./media/${file}?v=19`,import.meta.url).href;
+  v.src=new URL(`./media/${file}?v=29`,import.meta.url).href;
   stage.insertBefore(v,screen); clips[state]=v;
 }
 let shown=null;
