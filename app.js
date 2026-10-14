@@ -67,7 +67,7 @@ const CARDS=[
   {icon:'point',sub:'Miro와 가위바위보를 해볼까요?',title:'카메라를 향해 검지 하나를 펴 보세요!'},
   {icon:'wave',sub:'Miro에게 인사해볼까요?',title:'카메라를 향해 손을 흔들어 보세요!'},
   {icon:'v',sub:'Miro가 무슨 포즈를 할까요?',title:'카메라를 향해 V 해보세요!'},
-  {icon:'heart',sub:'Miro가 어떤 걸 가져다 줄까요?',title:'카메라를 향해 손가락을 하트모양으로 만들어보세요!'},
+  {icon:'heart',sub:'Miro가 어떤 걸 가져다 줄까요?',title:'카메라를 향해 하트를 해보세요!'},
 ];
 const CARD_MS=3000;
 const frameEl=document.querySelector('#frame'), hintEl=document.querySelector('#hint');
