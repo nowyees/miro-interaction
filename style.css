@@ -2,7 +2,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #fff; }
 body { font-family: system-ui, sans-serif; }
-#stage { position: relative; width: 100%; height: 100%; height: 100dvh; background: #fff; overflow: hidden; }
+#stage { position: relative; z-index: 0; width: 100%; height: 100%; height: 100dvh; background: #fff; overflow: hidden; }  /* own stacking context: the canvas and overlays never cover the buttons */
 #stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 #screen { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; z-index: 1; }
 .controls { position: fixed; bottom: max(18px, env(safe-area-inset-bottom)); right: max(18px, env(safe-area-inset-right)); display: flex; gap: 8px; }
