@@ -17,9 +17,28 @@ function extendedFingers(p) {
   return [[8, 6], [12, 10], [16, 14], [20, 18]].map(([tip, pip]) => d2(p[0], p[tip]) > d2(p[0], p[pip]) * 1.12);
 }
 
-// Per-frame pose: 'FIST' | 'OPEN' | 'V' | 'POINT' | null.
+// One-hand finger heart: index half-raised with the thumb pressed against
+// it (tip or last joint), other fingers curled, thumb raised past the
+// knuckles. Measured on photos: fists keep the index curled (ratio ~0.7),
+// a raised index ("one") keeps the thumb far away, OK/grip open the others.
+export function isFingerHeart(p) {
+  const palm = palmSize(p);
+  if (palm < 1e-6) return false;
+  const ratio = (tip, pip) => d2(p[0], p[tip]) / d2(p[0], p[pip]);
+  if (ratio(8, 6) < 1.0) return false;
+  // Curled fingers sometimes read as half-open (esp. back of hand), so judge
+  // them together: an OK sign or a grip opens them clearly past this.
+  const others = [ratio(12, 10), ratio(16, 14), ratio(20, 18)];
+  if (Math.max(...others) > 1.1 || others.reduce((a, b) => a + b) / 3 > 1.0) return false;
+  if (Math.min(d2(p[4], p[8]), d2(p[4], p[7])) > palm * 0.55) return false;
+  const ax = p[9].x - p[0].x, ay = p[9].y - p[0].y, len2 = ax * ax + ay * ay;
+  return ((p[4].x - p[0].x) * ax + (p[4].y - p[0].y) * ay) / len2 >= 1.1;
+}
+
+// Per-frame pose: 'HEART1' | 'FIST' | 'OPEN' | 'V' | 'POINT' | null.
 // The trained classifier is trusted first; geometry is the fallback.
 export function handPose(p, categories = []) {
+  if (isFingerHeart(p)) return 'HEART1';
   const top = categories[0];
   if (top && top.score >= 0.5) {
     if (top.categoryName === 'Closed_Fist') return 'FIST';
@@ -142,6 +161,7 @@ export class GestureEngine {
     // way there can look like a V for a moment: ask for a longer V hold then.
     if (hands.length === 2) this.twoHandsLast = at;
     const vHold = this.twoHandsLast !== null && at - this.twoHandsLast < 800 ? 1000 : 450;
+    if (any(t => t.holding('HEART1', at, 500))) return { gesture: 'TOMATO', poses };
     if (any(t => t.holding('V', at, vHold))) return { gesture: 'PICTURE', poses };
     if (any(t => t.shaking('OPEN', 'x', at))) return { gesture: 'HI', poses };
     // Index finger raised (a resting fist is too easy to make by accident).

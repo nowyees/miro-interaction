@@ -64,15 +64,15 @@ const HINTS={
   WAKING:{sub:'Miro가 물을 주고 있어요',title:'하던 일을 마치고 금방 돌아올 거예요!'},
 };
 const CARDS=[
-  {icon:'point',sub:'Miro와 가위바위보를 해볼까요?',title:'카메라를 향해 검지 하나를 펴 보세요!'},
-  {icon:'wave',sub:'Miro에게 인사해볼까요?',title:'카메라를 향해 손을 흔들어 보세요!'},
-  {icon:'v',sub:'Miro가 무슨 포즈를 할까요?',title:'카메라를 향해 V 해보세요!'},
-  {icon:'heart',sub:'Miro가 어떤 걸 가져다 줄까요?',title:'카메라를 향해 하트를 해보세요!'},
+  {icon:'point.png',sub:'Miro와 가위바위보를 해볼까요?',title:'카메라를 향해 검지 하나를 펴 보세요!'},
+  {icon:'wave.png',sub:'Miro에게 인사해볼까요?',title:'카메라를 향해 손을 흔들어 보세요!'},
+  {icon:'v.png',sub:'Miro가 무슨 포즈를 할까요?',title:'카메라를 향해 V 해보세요!'},
+  {icon:'finger-heart.svg',sub:'Miro가 어떤 걸 가져다 줄까요?',title:'카메라를 향해 하트를 해보세요!'},
 ];
 const CARD_MS=3000;
 const frameEl=document.querySelector('#frame'), hintEl=document.querySelector('#hint');
 const hintIcon=document.querySelector('#hint-icon'), hintSub=document.querySelector('#hint-sub'), hintTitle=document.querySelector('#hint-title');
-CARDS.forEach(c=>{ new Image().src=`./guide/${c.icon}.png`; });
+CARDS.forEach(c=>{ new Image().src=`./guide/${c.icon}`; });
 let hintKey=null, hintSwap, cardTimer, cardIndex=0;
 function fitFrame() {
   const w=stage.clientWidth, h=stage.clientHeight, fw=Math.min(w,h*9/16), fh=fw*16/9;
@@ -88,7 +88,7 @@ function showHint(hint) {
   if(!hint) return;
   // Fade out, swap the text, fade back in.
   hintSwap=setTimeout(()=>{
-    hintIcon.hidden=!hint.icon; if(hint.icon) hintIcon.src=`./guide/${hint.icon}.png`;
+    hintIcon.hidden=!hint.icon; if(hint.icon) hintIcon.src=`./guide/${hint.icon}`;
     hintSub.textContent=hint.sub; hintTitle.textContent=hint.title;
     hintEl.classList.add('show');
   },hintEl.textContent.trim()?450:0);
@@ -124,7 +124,7 @@ async function startVision() {
     camera=document.createElement('video'); camera.muted=true; camera.playsInline=true; camera.srcObject=stream;
     await camera.play();
     if(token!==initToken) return;
-    worker=new Worker(new URL('./vision-worker.js?v=31',import.meta.url));
+    worker=new Worker(new URL('./vision-worker.js?v=33',import.meta.url));
     const timeout=setTimeout(()=>fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'),45000);
     function fail(message) { if(token!==initToken) return; clearTimeout(timeout); stopVision(); showStatus(message); }
     worker.onerror=error=>{ console.error('Vision worker',error); fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'); };
