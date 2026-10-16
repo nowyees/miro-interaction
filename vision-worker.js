@@ -12,7 +12,7 @@ onmessage = async ({ data }) => {
   if (data.type === 'init') {
     try {
       const [{ FilesetResolver, FaceLandmarker, GestureRecognizer }, rec] = await Promise.all([
-        import('./vendor/vision_bundle.mjs'), import('./recognition.js?v=33')
+        import('./vendor/vision_bundle.mjs'), import('./recognition.js?v=35')
       ]);
       recognition = rec;
       const base = new URL('.', self.location.href);
@@ -23,7 +23,7 @@ onmessage = async ({ data }) => {
       });
       hands = await create(GestureRecognizer, files, {
         baseOptions: { modelAssetPath: new URL('models/gesture_recognizer.task', base).href },
-        runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence: 0.35, minHandPresenceConfidence: 0.35, minTrackingConfidence: 0.35
+        runningMode: 'VIDEO', numHands: 4, minHandDetectionConfidence: 0.35, minHandPresenceConfidence: 0.35, minTrackingConfidence: 0.35
       });
       engine = new rec.GestureEngine();
       postMessage({ type: 'ready' });

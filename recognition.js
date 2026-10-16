@@ -117,52 +117,50 @@ export class HandTrack {
   }
 }
 
-// Combines both hands into one gesture: TOMATO > PICTURE > HI > RSP (raised index).
+// Combines every visible hand into one gesture: TOMATO > PICTURE > HI > RSP.
+// Several people (or one hand busy holding a phone) are normal in the booth,
+// so each hand is judged on its own and any one of them can trigger.
 export class GestureEngine {
-  constructor() { this.tracks = [new HandTrack(), new HandTrack()]; this.heartSince = null; this.heartLast = null; this.twoHandsLast = null; }
-  reset() { this.tracks.forEach(t => t.reset()); this.heartSince = null; this.heartLast = null; this.twoHandsLast = null; }
-  // Keeps each physical hand on the same track between frames.
+  constructor() { this.tracks = []; this.heartSince = null; this.heartLast = null; }
+  reset() { this.tracks = []; this.heartSince = null; this.heartLast = null; }
+  // Keeps each physical hand on the same track between frames (nearest wrist).
   assign(hands) {
-    if (hands.length === 2) {
-      const order = hands[0].points[0].x <= hands[1].points[0].x ? [0, 1] : [1, 0];
-      hands.forEach((h, i) => { h.slot = order[i]; });
-    } else if (hands.length === 1) {
-      const w = hands[0].points[0];
-      const gap = t => t.samples.length ? Math.hypot(t.samples.at(-1).x - w.x, t.samples.at(-1).y - w.y) : Infinity;
-      hands[0].slot = gap(this.tracks[1]) < gap(this.tracks[0]) ? 1 : 0;
+    const last = t => t.samples.at(-1);
+    const pairs = [];
+    hands.forEach((h, i) => this.tracks.forEach((t, j) => {
+      const w = h.points[0], l = last(t);
+      if (l) pairs.push([Math.hypot(l.x - w.x, l.y - w.y), i, j]);
+    }));
+    pairs.sort((a, b) => a[0] - b[0]);
+    const usedH = new Set(), usedT = new Set(), next = [];
+    for (const [dist, i, j] of pairs) {
+      if (usedH.has(i) || usedT.has(j) || dist > Math.max(0.12, palmSize(hands[i].points) * 2)) continue;
+      usedH.add(i); usedT.add(j); hands[i].track = this.tracks[j]; next.push(this.tracks[j]);
     }
-    return hands;
+    hands.forEach((h, i) => { if (!usedH.has(i)) { h.track = new HandTrack(); next.push(h.track); } });
+    this.tracks = next;   // tracks whose hand left the view are dropped
   }
   update(hands, at) {
     // hands: [{points, categories}] with points in screen units.
     this.assign(hands);
-    const seen = new Set(hands.map(h => h.slot));
-    this.tracks.forEach((t, i) => { if (!seen.has(i)) t.reset(); });
 
-    const heartNow = hands.length === 2 && isHeart(hands[0].points, hands[1].points);
+    // Two-hand big heart from any pair of hands.
+    let heartNow = false;
+    for (let i = 0; i < hands.length && !heartNow; i++)
+      for (let j = i + 1; j < hands.length && !heartNow; j++)
+        heartNow = isHeart(hands[i].points, hands[j].points);
     if (heartNow) { this.heartSince ??= at; this.heartLast = at; }
     else if (this.heartLast === null || at - this.heartLast > 300) this.heartSince = null;
-    // Two hands close together are a heart in progress, not single-hand gestures.
-    const twoClose = hands.length === 2 && d2(hands[0].points[0], hands[1].points[0]) < (palmSize(hands[0].points) + palmSize(hands[1].points)) * 3;
-    if (this.heartSince !== null) {
-      this.tracks.forEach(t => t.reset());
-      return { gesture: at - this.heartSince >= 400 ? 'TOMATO' : null, poses: ['HEART'] };
-    }
+    if (this.heartSince !== null && at - this.heartSince >= 400) return { gesture: 'TOMATO', poses: ['HEART'] };
 
-    const poses = [];
-    for (const h of hands) {
-      const pose = twoClose ? null : handPose(h.points, h.categories);
-      poses.push(pose);
-      this.tracks[h.slot].push(h.points, pose, at);
-    }
-    if (twoClose) return { gesture: null, poses };
+    const poses = hands.map(h => {
+      const pose = handPose(h.points, h.categories);
+      h.track.push(h.points, pose, at);
+      return pose;
+    });
     const any = test => this.tracks.some(test);
-    // Both hands up usually means a heart is being formed, and a hand on its
-    // way there can look like a V for a moment: ask for a longer V hold then.
-    if (hands.length === 2) this.twoHandsLast = at;
-    const vHold = this.twoHandsLast !== null && at - this.twoHandsLast < 800 ? 1000 : 450;
     if (any(t => t.holding('HEART1', at, 500))) return { gesture: 'TOMATO', poses };
-    if (any(t => t.holding('V', at, vHold))) return { gesture: 'PICTURE', poses };
+    if (any(t => t.holding('V', at, 600))) return { gesture: 'PICTURE', poses };
     if (any(t => t.shaking('OPEN', 'x', at))) return { gesture: 'HI', poses };
     // Index finger raised (a resting fist is too easy to make by accident).
     if (any(t => t.holding('POINT', at, 500))) return { gesture: 'RSP', poses };

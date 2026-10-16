@@ -124,7 +124,7 @@ async function startVision() {
     camera=document.createElement('video'); camera.muted=true; camera.playsInline=true; camera.srcObject=stream;
     await camera.play();
     if(token!==initToken) return;
-    worker=new Worker(new URL('./vision-worker.js?v=33',import.meta.url));
+    worker=new Worker(new URL('./vision-worker.js?v=35',import.meta.url));
     const timeout=setTimeout(()=>fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'),45000);
     function fail(message) { if(token!==initToken) return; clearTimeout(timeout); stopVision(); showStatus(message); }
     worker.onerror=error=>{ console.error('Vision worker',error); fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'); };
