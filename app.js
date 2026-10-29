@@ -4,6 +4,7 @@ const status=document.querySelector('#status');
 let playbackToken=0, currentClip=null, stream, worker, initializing=false;
 let ready=false, inFlight=false, frameTimer, camera, lastFrameTime=-1, initToken=0;
 const showStatus=text=>{ status.textContent=text; status.hidden=!text; };
+const EMBED=new URLSearchParams(location.search).has('embed');   // see the embed section at the end
 
 // Every clip is preloaded in its own <video> under the canvas. The canvas only
 // ever shows frames that were actually decoded, and keeps the last one while
@@ -102,7 +103,7 @@ function updateHint(state) {
   } else showHint(null);
 }
 let flow;
-flow=new InteractionFlow(state=>{ updateHint(state); queueMicrotask(()=>playClip(state)); });
+flow=new InteractionFlow(state=>{ updateHint(state); queueMicrotask(()=>playClip(state)); tellParent(); });
 window.__miro={flow,clips}; // console access for testing
 
 function stopVision() {
@@ -130,7 +131,7 @@ async function startVision() {
     worker.onerror=error=>{ console.error('Vision worker',error); fail('웹캠 인식을 준비하지 못했어요. 리셋으로 다시 시도해 주세요.'); };
     worker.onmessage=({data})=>{
       if(token!==initToken) return;
-      if(data.type==='ready') { clearTimeout(timeout); ready=true; initializing=false; showStatus(''); capture(); }
+      if(data.type==='ready') { clearTimeout(timeout); ready=true; initializing=false; showStatus(''); capture(); tellParent(); }
       else if(data.type==='result' && !document.hidden) { flow.tick(data); drawDebug(data); drawCam(data); }
       else if(data.type==='frame-done') { inFlight=false; schedule(); }
       else if(data.type==='error' || data.type==='frame-error') { console.error('Recognition',data.message); fail('웹캠 인식 오류가 생겼어요. 리셋으로 다시 시도해 주세요.'); }
@@ -219,4 +220,26 @@ document.addEventListener('keydown',e=>{
 });
 window.addEventListener('pagehide',stopVision);
 window.addEventListener('pageshow',event=>{ if(event.persisted) startVision(); });
-startVision();
+// Embedded (?embed): the page sits inside another site, e.g. the portfolio's
+// motion page. The camera only starts when the host asks, and the host's
+// buttons can stand in for gestures:
+//   {miro:'camera'} | {miro:'wake'} | {miro:'gesture',name:'RSP'|'HI'|'PICTURE'|'TOMATO'} | {miro:'reset'}
+// Every state change is reported back as {miro:'state',state,camera}.
+function tellParent() {
+  if(!EMBED||window.parent===window||!flow) return;
+  window.parent.postMessage({miro:'state',state:flow.state,camera:ready||initializing,status:status.hidden?'':status.textContent},'*');
+}
+if(EMBED) {
+  document.documentElement.classList.add('embed');
+  new MutationObserver(tellParent).observe(status,{childList:true,attributes:true});
+  window.addEventListener('message',({source,data})=>{
+    if(source!==window.parent||!data||typeof data.miro!=='string') return;
+    const at=performance.now();
+    if(data.miro==='camera') { showStatus(''); startVision().then(tellParent); tellParent(); }
+    else if(data.miro==='wake') { if(flow.state==='IDLE') flow.change('WAKING',at); }
+    else if(data.miro==='gesture') flow.trigger(data.name,at);
+    else if(data.miro==='reset') { flow.reset(at); worker?.postMessage({type:'reset'}); }
+    else if(data.miro==='hello') tellParent();
+  });
+  tellParent();
+} else startVision();
