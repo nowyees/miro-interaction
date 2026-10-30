@@ -29,4 +29,3 @@ body:has(#stage:fullscreen) .controls, body:has(#stage:fullscreen) #status { dis
   border-radius: calc(var(--u) * 18); box-shadow: 0 calc(var(--u) * 6) calc(var(--u) * 24) #0002; background: #eee; outline: calc(var(--u) * 3) solid #fff; }
 /* Embedded in another page: no own buttons or messages (the host shows its own). */
 .embed .controls, .embed #status { display: none; }
-.embed:not(.camera-on) #hint { display: none; }
