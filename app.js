@@ -235,7 +235,8 @@ if(EMBED) {
   window.addEventListener('message',({source,data})=>{
     if(source!==window.parent||!data||typeof data.miro!=='string') return;
     const at=performance.now();
-    if(data.miro==='camera') { showStatus(''); startVision().then(tellParent); tellParent(); }
+    // The on-video gesture guide talks about the camera, so it only shows once the camera is on.
+    if(data.miro==='camera') { document.documentElement.classList.add('camera-on'); showStatus(''); startVision().then(tellParent); tellParent(); }
     else if(data.miro==='wake') { if(flow.state==='IDLE') flow.change('WAKING',at); }
     else if(data.miro==='gesture') flow.trigger(data.name,at);
     else if(data.miro==='reset') { flow.reset(at); worker?.postMessage({type:'reset'}); }
